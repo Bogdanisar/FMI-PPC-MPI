@@ -26,7 +26,6 @@ enum MY_MPI_TAGS {
 };
 
 
-
 void doMasterProc(int argc, char **argv, int rank, int proc_num) {
     const int totalSize = saaapf::getTotalSize();
     const int num_chunks = 20;

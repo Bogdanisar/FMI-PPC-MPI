@@ -2,7 +2,7 @@
 #include <fstream>
 #include <vector>
 #include "mpi.h"
- 
+
 using namespace std;
 
 
@@ -19,21 +19,22 @@ void __MPIAssert(bool condition, const char * const cond_str, const char * const
 #define MPIPn cout << '\n'
 #define MASTER_RANK 0
 
- 
+
+// algoritmul lui Euclid
 int cmmdc(int a, int b) {
     if (b == 0) {
         return a;
     }
- 
+
     return cmmdc(b, a % b);
 }
- 
+
 // cel mai mare multiplu comun a 2 numere
 long long cmmmc(int a, int b) {
     return (long long)(a / cmmdc(a, b)) * b;
 }
 
- 
+
 int main(int argc, char* argv[]) {
     MPI_Init(&argc, &argv);
     MPIAssert(argc == 2);
@@ -53,6 +54,13 @@ int main(int argc, char* argv[]) {
 
         for (int i = 0; i < num_divs; ++i) {
             in >> divs[i];
+        }
+
+        if (debug) {
+            MPIPrintf("N = %i; num_divs = %i\n", N, num_divs);
+            for (int i = 0; i < num_divs; ++i) {
+                MPIPrintf("divs[%i] = %i\n", i, divs[i]);
+            }
         }
 
         in.close();
@@ -77,13 +85,6 @@ int main(int argc, char* argv[]) {
 
     MPI_Bcast(divs, num_divs, MPI_INT, MASTER_RANK, MPI_COMM_WORLD);
 
-
-    if (debug) {
-        MPIPrintf("N = %i; num_divs = %i\n", N, num_divs);
-        for (int i = 0; i < num_divs; ++i) {
-            MPIPrintf("divs[%i] = %i\n", i, divs[i]);
-        }
-    }
 
     int limit = 1<<num_divs;
     MPIAssert(limit % size == 0);
@@ -115,22 +116,22 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-        
+
         if (too_big) {
             continue;
         }
- 
+
         long long cardinal_submultime = N / multiplu_comun;
         long long suma_submultime = multiplu_comun * (cardinal_submultime * (cardinal_submultime + 1) / 2);
 
-        if (debug) {
+        if (debug > 2) {
             MPIPv(nr_elemente); MPIPn;
             MPIPv(multiplu_comun); MPIPn;
             MPIPv(cardinal_submultime); MPIPn;
             MPIPv(suma_submultime); MPIPn;
             MPIPn;
         }
-        
+
         if (nr_elemente & 1) { // impar
             suma_locala += suma_submultime;
         }
@@ -144,19 +145,18 @@ int main(int argc, char* argv[]) {
 
     if (debug) {
         MPIPrintf("suma_locala = %lli\n", suma_locala);
-        MPIPrintf("suma_totala = %lli\n", suma_totala);
     }
 
     if (rank == MASTER_RANK) {
+        MPIPrintf("suma_totala = %lli\n", suma_totala);
         ofstream out("suman.out");
         out << suma_totala << '\n';
+        out.close();
     }
 
     free(divs);
- 
     MPI_Finalize();
     return 0;
 }
- 
- 
- 
+
+
