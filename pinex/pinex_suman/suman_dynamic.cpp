@@ -132,12 +132,16 @@ inline long long int computeSumForRange(int rank, int chunkStart, int chunkSize,
 }
 
 void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, InputInformation input) {
-
     const int limit = 1<<(input.numDivisors);
-    MPIAssert(limit % NUM_CHUNKS == 0);
-    MPIPrintf("limit = %i\n", limit);
+    int num_chunks = NUM_CHUNKS;
+    while (limit % num_chunks != 0) {
+        num_chunks /= 2;
+    }
+    int chunkSize = limit / num_chunks;
 
-    int chunkSize = limit / NUM_CHUNKS;
+    MPIPv(num_chunks); MPIPn;
+    MPIPv(chunkSize); MPIPn;
+
     MPI_Bcast(&chunkSize, 1, MPI_INT, MASTER_RANK, MPI_COMM_WORLD);
 
     MPI_Request req[proc_num - 1];
