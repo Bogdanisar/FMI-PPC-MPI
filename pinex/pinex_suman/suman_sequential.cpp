@@ -6,7 +6,7 @@
 using namespace std;
 
 #define KMAX 20 + 5
-int num_divs, divs[KMAX];
+int num_divs, divisors[KMAX];
 
 
 int cmmdc(int a, int b) {
@@ -17,25 +17,25 @@ int cmmdc(int a, int b) {
     return cmmdc(b, a % b);
 }
 
-// cel mai mare multiplu comun a 2 numere
+// lowest common multiple
 long long cmmmc(int a, int b) {
-    return (long long)a * b / cmmdc(a, b);
+    return (a / cmmdc(a, b)) * (long long)b;
 }
 
 int main() {
     ifstream in("suman.in");
     ofstream out("suman.out");
 
-    int N, K;
-    in >> N >> K;
+    int N, numDivisors;
+    in >> N >> numDivisors;
 
-    for (int i = 0; i < K; ++i) {
+    for (int i = 0; i < numDivisors; ++i) {
         int d;
         in >> d;
-        divs[num_divs++] = d;
+        divisors[num_divs++] = d;
     }
 
-    int limit_mask = (1<<K);
+    int limit_mask = (1<<numDivisors);
     long long total_suma = 0;
     for (int mask = 1; mask < limit_mask; ++mask) { // itereaza peste submultimi
 
@@ -43,10 +43,10 @@ int main() {
         long long multiplu_comun = 1;
         bool too_big = false;
 
-        for (int b = 0; b < K; ++b) { // itereaza peste posibilele elemente din submultimea curenta
+        for (int b = 0; b < numDivisors; ++b) { // itereaza peste posibilele elemente din submultimea curenta
             if (mask & (1 << b)) { // verifica ca elementul curent e in submultime
                 nr_elemente += 1;
-                multiplu_comun = cmmmc(multiplu_comun, divs[b]);
+                multiplu_comun = cmmmc(multiplu_comun, divisors[b]);
                 if (multiplu_comun > N) {
                     too_big = true;
                     break;
