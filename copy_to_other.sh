@@ -1,11 +1,29 @@
 #!/bin/bash
 
-otherMachineIP='192.168.133.132'
-current_dir=$(realpath .)
-parent_dir=$(dirname "$current_dir")
+set -e # exit on failure of subcommands
+set -x # verbose output
+
+script_path=$(realpath "$0")
+project_dir=$(dirname "$script_path")
+suman_dir="$project_dir/suman"
+testing_dir="$project_dir/Testing"
 username=$(whoami)
 
-set -x
+# parent_dir=$(dirname "$project_dir")
 
-ssh $otherMachineIP rm -rf "$current_dir"
-scp -r "$current_dir" $username@$otherMachineIP:"$parent_dir"
+myIPWithWhitespace=$(hostname -I)
+myIP=${myIPWithWhitespace//[[:blank:]]/}
+
+# iterate CLI arguments
+for otherMachineIP in "$@"
+do
+    if [ "$otherMachineIP" = "$myIP" ]
+    then
+        echo "Error: Don't list the current IP ($myIP) as an argument to this script."
+        exit -1
+    fi
+
+    ssh "$otherMachineIP" mkdir -p "$project_dir"
+    scp -r "$suman_dir" $username@$otherMachineIP:"$project_dir"
+    scp -r "$testing_dir" $username@$otherMachineIP:"$project_dir"
+done
