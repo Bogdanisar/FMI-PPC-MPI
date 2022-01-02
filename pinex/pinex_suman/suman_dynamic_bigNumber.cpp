@@ -14,7 +14,7 @@
 using namespace std;
 
 
-#define MPIPrintf(format, ...) printf("[%i]: " format, rank, ##__VA_ARGS__)
+#define MPIPrintf(format, ...) printf("[%i]: " format, rank, ##__VA_ARGS__); fflush(stdout);
 
 void __MPIAssert(int rank, bool condition, const char * const cond_str, const char * const func, int line) {
     if (!condition) {
@@ -24,8 +24,8 @@ void __MPIAssert(int rank, bool condition, const char * const cond_str, const ch
 }
 
 #define MPIAssert(condition) __MPIAssert(rank, (condition), #condition, __FUNCTION__, __LINE__)
-#define MPIPv(var) cout << "[" << rank << "]: " << #var << " = " << var
-#define MPIPn cout << '\n'
+#define MPIPv(var) cout << "[" << rank << "]: " << #var << " = " << var << std::flush
+#define MPIPn cout << endl
 
 #define MASTER_RANK 0
 const char * const INPUT_FILE = "suman.in";
@@ -67,26 +67,17 @@ void broadcastIntegerMPZ(int rank, mpz_class& number) {
     MPIAssert(buffer != NULL);
 
     if (rank == MASTER_RANK) {
-        MPIPv(buffer); MPIPn;
+        // we need a separate variable here so that it doesn't get deallocated immediately
+        string stringRepresentation = number.get_str();
 
-        const char * numberString = number.get_str().c_str();
-        strcpy(buffer, number.get_str().c_str()); // populate the buffer
-
-        MPIPv(number); MPIPn;
-        MPIPv(number.get_str()); MPIPn;
-        MPIPv(number.get_str().c_str()); MPIPn;
-        MPIPv(buffer); MPIPn;
-        MPIPv(bufferSize); MPIPn;
-        MPIPn;
+        const char * numberCString = stringRepresentation.c_str();
+        strcpy(buffer, numberCString); // populate the buffer
     }
 
     MPI_Bcast(buffer, bufferSize, MPI_CHAR, MASTER_RANK, MPI_COMM_WORLD);
 
     if (rank != MASTER_RANK) {
-        MPIPrintf("Got here\n");
-        MPIPv(buffer); MPIPn;
-        number = buffer;
-        MPIPrintf("Got here\n");
+        number = mpz_class(buffer);
     }
 
     free(buffer);
@@ -108,10 +99,9 @@ InputInformation getInput(int rank) {
 
         string N_str;
         in >> N_str;
-        N = N_str;
+        N = mpz_class(N_str);
 
         in >> numDivisors;
-
         for (int i = 0; i < numDivisors; ++i) {
             string div_str;
             in >> div_str;
@@ -341,14 +331,11 @@ void doSlaveProc(int argc, char **argv, int rank, int proc_num, int debug, Input
 
             if (debug) { MPIPrintf("Got chunkStart: %i\n", chunkStart); }
             mpz_class localSum = computeSumForRange(rank, chunkStart, chunkSize, input, debug);
-            if (debug) { MPIPrintf("Computed localSum: %s\n", localSum.get_str().c_str()); }
+            if (debug) { MPIPrintf("Computed localSum: %s\n\n", localSum.get_str().c_str()); }
 
-            const char *buffer = localSum.get_str().c_str();
+            string stringRepresentation = localSum.get_str(); // we need a separate variable here so that it doesn't get deallocated immediately
+            const char *buffer = stringRepresentation.c_str();
             int bufferSize = strlen(buffer) + 1;
-
-            MPIPv(buffer); MPIPn;
-            MPIPv(bufferSize); MPIPn;
-            MPIPn;
 
             MPI_Send(&bufferSize,
                      1,
