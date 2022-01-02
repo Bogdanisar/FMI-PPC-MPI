@@ -34,10 +34,10 @@ We need to install the MPI (Message Passing Interface) and the GMP (GNU Multiple
 
 The programs take input as text from `./suman/suman.in` and write output as text to `./suman/suman.out` (and to stdout). They also take on integer as a command-line argument which specifies the debug logging level (0 - none, 1, 2, ...).
 
-### Running the code on one machine (inside `./suman`):
+### Running the code (inside `./suman`):
 - `$: source=suman_dynamic;`
 - `$: mpicxx $source.cpp -o $source.exe -lgmpxx -lgmp && chmod 755 ./$source.exe` - compilation
-- `$: [time] mpirun -n NUM_PROCESSES ./$source.exe DEBUG_LEVEL` - running
+- `$: [time] mpirun -n NUM_PROCESSES ./$source.exe DEBUG_LEVEL` - execution
 
 or, in one line:
 
@@ -55,7 +55,7 @@ In order to run the computation in a distributed manner, you need to have a SSH 
 
 `$: ./copy_to_other.sh IP_OF_MACHINE2 [IP_OF_MACHINE3 [...]]`
 
-This will copy the executable (and the rest of the project) to the other machines. Care should be taken because the script might overwrite some files on the target machine at the same path as locally.
+This will copy the executable (and the rest of the project) to the other machines. Care should be taken because the script might overwrite some files on the target machine at the same path as the project path on the local machine.
 
 Then, the run command is as following:
 
@@ -63,4 +63,6 @@ Then, the run command is as following:
 
 MPI will spawn up to NUM1 procs on the first machine, then up to NUM2 procs on the second machine and so forth until NUM_PROCESSES is reached.
 
-An alternative to specifying the hosts on the command line is using a machinefile and using `-f FILE_NAME` with the run command.
+An alternative to specifying the hosts on the command line is using a machinefile and using the `-f FILE_NAME` option with the `mpirun` command.
+
+In a virtual machine environment, it might be useful to do the setup on one machine and then clone it as many times as needed.
