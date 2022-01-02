@@ -26,7 +26,7 @@ void __MPIAssert(int rank, bool condition, const char * const cond_str, const ch
 #define MASTER_RANK 0
 const char * const INPUT_FILE = "suman.in";
 const char * const OUTPUT_FILE = "suman.out";
-const int NUM_CHUNKS = 16;
+const int NUM_CHUNKS = 32;
 
 enum MY_MPI_TAGS {
     MY_MPI_TAGS_MASTER_TO_SLAVE_TASK,
@@ -50,12 +50,14 @@ long long cmmmc(int a, int b) {
 }
 
 struct InputInformation {
-    int N, numDivisors;
+    long long int N;
+    int numDivisors;
     int *divisors;
 };
 
 InputInformation getInput(int rank) {
-    int N, numDivisors;
+    long long int N;
+    int numDivisors;
     int *divisors;
 
     if (rank == MASTER_RANK) {

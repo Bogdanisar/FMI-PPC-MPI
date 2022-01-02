@@ -40,7 +40,7 @@ enum MY_MPI_TAGS {
 };
 
 
-// algoritmul lui Euclid
+// Euclid
 mpz_class cmmdc(mpz_class a, mpz_class b) {
     if (b == 0) {
         return a;
@@ -49,7 +49,7 @@ mpz_class cmmdc(mpz_class a, mpz_class b) {
     return cmmdc(b, a % b);
 }
 
-// cel mai mare multiplu comun a 2 numere
+// lowet common multiple
 mpz_class cmmmc(mpz_class a, mpz_class b) {
     return (a / cmmdc(a, b)) * b;
 }

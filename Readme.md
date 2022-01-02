@@ -8,7 +8,7 @@ Introduction to the usage of this concept in competitive programming can be foun
 The useful observation for us is that the computation needed for solving such a problem can generally be divided into many and rather independent parts, which is why it is easily open to a distributed solution in MPI (Message Passing Interface).
 
 One such application is the 'Suman' [problem](https://infoarena.ro/problema/suman) on infoarena.
-Briefly, we want to compute the sum of natural numbers in the interval [1,N] which are divisible by at least one of v<sub>1</sub>, v<sub>2</sub>, ..., v<sub>K</sub>. Different solutions for this are in the `./suman` directory.
+**Briefly, we want to compute the sum of natural numbers in the interval [1,N] which are divisible by at least one of v<sub>1</sub>, v<sub>2</sub>, ..., v<sub>K</sub>**. Different solutions for this are in the `./suman` directory.
 
 
 ## Suman

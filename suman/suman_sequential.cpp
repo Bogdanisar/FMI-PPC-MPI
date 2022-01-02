@@ -9,7 +9,7 @@ using namespace std;
 int num_divs, divisors[KMAX];
 
 
-int cmmdc(int a, int b) {
+long long cmmdc(long long a, long long b) {
     if (b == 0) {
         return a;
     }
@@ -18,7 +18,7 @@ int cmmdc(int a, int b) {
 }
 
 // lowest common multiple
-long long cmmmc(int a, int b) {
+long long cmmmc(long long a, long long b) {
     return (a / cmmdc(a, b)) * (long long)b;
 }
 
@@ -26,7 +26,8 @@ int main() {
     ifstream in("suman.in");
     ofstream out("suman.out");
 
-    int N, numDivisors;
+    long long int N;
+    int numDivisors;
     in >> N >> numDivisors;
 
     for (int i = 0; i < numDivisors; ++i) {
@@ -39,7 +40,7 @@ int main() {
     long long total_suma = 0;
     for (int mask = 1; mask < limit_mask; ++mask) { // itereaza peste submultimi
 
-        int nr_elemente = 0;
+        long long nr_elemente = 0;
         long long multiplu_comun = 1;
         bool too_big = false;
 

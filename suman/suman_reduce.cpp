@@ -46,7 +46,8 @@ int main(int argc, char* argv[]) {
     MPIAssert(argc == 2);
     int debug = atoi(argv[1]);
 
-    int N, num_divs;
+    long long int N;
+    int num_divs;
     int *divs = NULL;
     if (rank == MASTER_RANK) {
         ifstream in("suman.in");
@@ -59,7 +60,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (debug) {
-            MPIPrintf("N = %i; num_divs = %i\n", N, num_divs);
+            MPIPrintf("N = %lli; num_divs = %i\n", N, num_divs);
             for (int i = 0; i < num_divs; ++i) {
                 MPIPrintf("divs[%i] = %i\n", i, divs[i]);
             }
@@ -71,15 +72,16 @@ int main(int argc, char* argv[]) {
 
     // broadcast input
     struct primary_input {
-        int a, b;
+        long long int N;
+        int num_divs;
     };
 
     primary_input inp;
-    inp.a = N;
-    inp.b = num_divs;
+    inp.N = N;
+    inp.num_divs = num_divs;
     MPI_Bcast(&inp, sizeof(inp), MPI_CHAR, MASTER_RANK, MPI_COMM_WORLD);
-    N = inp.a;
-    num_divs = inp.b;
+    N = inp.N;
+    num_divs = inp.num_divs;
 
     if (rank != MASTER_RANK) {
         divs = (int*)malloc(sizeof(int) * num_divs);
