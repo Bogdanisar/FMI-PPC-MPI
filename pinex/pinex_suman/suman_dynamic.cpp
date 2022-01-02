@@ -10,7 +10,7 @@
 using namespace std;
 
 
-#define MPIPrintf(format, ...) printf("[%i]: " format, rank, ##__VA_ARGS__)
+#define MPIPrintf(format, ...) printf("[%i]: " format, rank, ##__VA_ARGS__); fflush(stdout)
 
 void __MPIAssert(int rank, bool condition, const char * const cond_str, const char * const func, int line) {
     if (!condition) {
@@ -20,8 +20,8 @@ void __MPIAssert(int rank, bool condition, const char * const cond_str, const ch
 }
 
 #define MPIAssert(condition) __MPIAssert(rank, (condition), #condition, __FUNCTION__, __LINE__)
-#define MPIPv(var) cout << "[" << rank << "]: " << #var << " = " << var
-#define MPIPn cout << '\n'
+#define MPIPv(var) cout << "[" << rank << "]: " << #var << " = " << var << std::flush
+#define MPIPn cout << endl
 
 #define MASTER_RANK 0
 const char * const INPUT_FILE = "suman.in";
@@ -138,6 +138,7 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
         num_chunks /= 2;
     }
     int chunkSize = limit / num_chunks;
+    MPIAssert(proc_num <= num_chunks);
 
     MPIPv(num_chunks); MPIPn;
     MPIPv(chunkSize); MPIPn;
@@ -172,11 +173,13 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
         req_count += 1;
     }
     MPIAssert(req_count == proc_num - 1);
+    int activeSlaves = req_count;
 
     long long int totalSum = 0;
-    while (req_count > 0) {
+    while (activeSlaves > 0) {
         int req_idx;
         MPI_Waitany(req_count, req, &req_idx, MPI_STATUS_IGNORE);
+        MPIAssert(req_idx != MPI_UNDEFINED);
 
         // MPIPrintf("Request at index %i of tag %i with proc %i finished\n", req_idx, last_tag[req_idx], last_rank[req_idx]);
 
@@ -226,14 +229,11 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
         }
         else {
             MPIAssert( last_tag[req_idx] == MY_MPI_TAGS_MASTER_TO_SLAVE_TERMINATE );
+            MPIPrintf("Rank %i finished\n", last_rank[req_idx]);
 
-            swap(req[req_idx], req[req_count - 1]);
-            swap(last_tag[req_idx], last_tag[req_count - 1]);
-            swap(last_rank[req_idx], last_rank[req_count - 1]);
-            swap(last_chunk_start[req_idx], last_chunk_start[req_count - 1]);
-            swap(last_result[req_idx], last_result[req_count - 1]);
+            req[req_idx] = MPI_REQUEST_NULL;
 
-            req_count -= 1;
+            activeSlaves -= 1;
         }
     }
 

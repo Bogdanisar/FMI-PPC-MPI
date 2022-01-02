@@ -14,7 +14,7 @@
 using namespace std;
 
 
-#define MPIPrintf(format, ...) printf("[%i]: " format, rank, ##__VA_ARGS__); fflush(stdout);
+#define MPIPrintf(format, ...) printf("[%i]: " format, rank, ##__VA_ARGS__); fflush(stdout)
 
 void __MPIAssert(int rank, bool condition, const char * const cond_str, const char * const func, int line) {
     if (!condition) {
@@ -178,6 +178,7 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
         num_chunks /= 2;
     }
     int chunkSize = limit / num_chunks;
+    MPIAssert(proc_num <= num_chunks);
 
     MPIPv(num_chunks); MPIPn;
     MPIPv(chunkSize); MPIPn;
@@ -188,7 +189,6 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
     MY_MPI_TAGS last_tag[proc_num - 1];
     int last_rank[proc_num - 1];
     int last_chunk_start[proc_num - 1];
-    mpz_class last_result[proc_num - 1];
     char *last_result_buffer[proc_num - 1];
     int last_result_buffer_size[proc_num - 1];
 
@@ -215,11 +215,13 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
         req_count += 1;
     }
     MPIAssert(req_count == proc_num - 1);
+    int activeSlaves = req_count;
 
     mpz_class totalSum = 0;
-    while (req_count > 0) {
+    while (activeSlaves > 0) {
         int req_idx;
         MPI_Waitany(req_count, req, &req_idx, MPI_STATUS_IGNORE);
+        MPIAssert(req_idx != MPI_UNDEFINED);
 
         // MPIPrintf("Request completed at index %i of tag %i from rank %i\n", req_idx, last_tag[req_idx], last_rank[req_idx]);
 
@@ -288,18 +290,12 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
         }
         else {
             MPIAssert( last_tag[req_idx] == MY_MPI_TAGS_MASTER_TO_SLAVE_TERMINATE );
+            MPIPrintf("Rank %i finished\n", last_rank[req_idx]);
 
             free(last_result_buffer[req_idx]);
+            req[req_idx] = MPI_REQUEST_NULL;
 
-            swap(req[req_idx], req[req_count - 1]);
-            swap(last_tag[req_idx], last_tag[req_count - 1]);
-            swap(last_rank[req_idx], last_rank[req_count - 1]);
-            swap(last_chunk_start[req_idx], last_chunk_start[req_count - 1]);
-            swap(last_result[req_idx], last_result[req_count - 1]);
-            swap(last_result_buffer[req_idx], last_result_buffer[req_count - 1]);
-            swap(last_result_buffer_size[req_idx], last_result_buffer_size[req_count - 1]);
-
-            req_count -= 1;
+            activeSlaves -= 1;
         }
     }
     MPIAssert(chunkStart == limit);
@@ -313,7 +309,7 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
 void doSlaveProc(int argc, char **argv, int rank, int proc_num, int debug, InputInformation input) {
     int chunkSize;
     MPI_Bcast(&chunkSize, 1, MPI_INT, MASTER_RANK, MPI_COMM_WORLD);
-    MPIPrintf("Got chunk size(%i) in broadcast\n", chunkSize);
+    MPIPrintf("Got chunkSize(%i) in broadcast\n", chunkSize);
 
     while (true) {
         MPI_Status status;
@@ -333,7 +329,8 @@ void doSlaveProc(int argc, char **argv, int rank, int proc_num, int debug, Input
             mpz_class localSum = computeSumForRange(rank, chunkStart, chunkSize, input, debug);
             if (debug) { MPIPrintf("Computed localSum: %s\n\n", localSum.get_str().c_str()); }
 
-            string stringRepresentation = localSum.get_str(); // we need a separate variable here so that it doesn't get deallocated immediately
+            // we need the stringRepresentation variable here so that it doesn't get deallocated immediately
+            string stringRepresentation = localSum.get_str();
             const char *buffer = stringRepresentation.c_str();
             int bufferSize = strlen(buffer) + 1;
 
