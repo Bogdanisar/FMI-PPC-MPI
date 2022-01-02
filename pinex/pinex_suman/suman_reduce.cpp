@@ -6,17 +6,18 @@
 using namespace std;
 
 
-void __MPIAssert(bool condition, const char * const cond_str, const char * const func, int line) {
+#define MPIPrintf(format, ...) printf("[%i]: " format, rank, ##__VA_ARGS__); fflush(stdout)
+
+void __MPIAssert(int rank, bool condition, const char * const cond_str, const char * const func, int line) {
     if (!condition) {
-        printf("Assert condition [ %s ] failed at (%s):%i. Aborting...\n", cond_str, func, line);
+        MPIPrintf("Assert condition [ %s ] failed at (%s):%i. Aborting...\n", cond_str, func, line);
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
 }
 
-#define MPIAssert(condition) __MPIAssert((condition), #condition, __FUNCTION__, __LINE__)
-#define MPIPrintf(format, ...) printf("[%i]: " format, rank, ##__VA_ARGS__)
-#define MPIPv(var) cout << "[" << rank << "]: " << #var << " = " << var
-#define MPIPn cout << '\n'
+#define MPIAssert(condition) __MPIAssert(rank, (condition), #condition, __FUNCTION__, __LINE__)
+#define MPIPv(var) cout << "[" << rank << "]: " << #var << " = " << var << std::flush
+#define MPIPn cout << endl
 #define MASTER_RANK 0
 
 
@@ -37,12 +38,13 @@ long long cmmmc(int a, int b) {
 
 int main(int argc, char* argv[]) {
     MPI_Init(&argc, &argv);
-    MPIAssert(argc == 2);
-    int debug = atoi(argv[1]);
 
     int rank,size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    MPIAssert(argc == 2);
+    int debug = atoi(argv[1]);
 
     int N, num_divs;
     int *divs = NULL;
