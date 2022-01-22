@@ -26,7 +26,7 @@ void __MPIAssert(int rank, bool condition, const char * const cond_str, const ch
 #define MASTER_RANK 0
 const char * const INPUT_FILE = "suman.in";
 const char * const OUTPUT_FILE = "suman.out";
-const int NUM_CHUNKS = 32;
+const int NUM_CHUNKS = 16;
 
 enum MY_MPI_TAGS {
     MY_MPI_TAGS_MASTER_TO_SLAVE_TASK,
@@ -159,7 +159,11 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
             continue;
         }
 
-        MPI_Isend(&chunkStart,
+        last_tag[req_count] = MY_MPI_TAGS_MASTER_TO_SLAVE_TASK;
+        last_rank[req_count] = r;
+        last_chunk_start[req_count] = chunkStart;
+
+        MPI_Isend(&last_chunk_start[req_count],
                   1,
                   MPI_INT,
                   r,
@@ -167,23 +171,21 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
                   MPI_COMM_WORLD,
                   &req[req_count]);
 
-        last_tag[req_count] = MY_MPI_TAGS_MASTER_TO_SLAVE_TASK;
-        last_rank[req_count] = r;
-        last_chunk_start[req_count] = chunkStart;
-
         chunkStart += chunkSize;
         req_count += 1;
     }
     MPIAssert(req_count == proc_num - 1);
     int activeSlaves = req_count;
 
+    char dummy; // for the MY_MPI_TAGS_MASTER_TO_SLAVE_TERMINATE message
     long long int totalSum = 0;
+
     while (activeSlaves > 0) {
         int req_idx;
         MPI_Waitany(req_count, req, &req_idx, MPI_STATUS_IGNORE);
         MPIAssert(req_idx != MPI_UNDEFINED);
 
-        // MPIPrintf("Request at index %i of tag %i with proc %i finished\n", req_idx, last_tag[req_idx], last_rank[req_idx]);
+        // MPIPrintf("Request completed at index %i of tag %i with proc %i finished\n", req_idx, last_tag[req_idx], last_rank[req_idx]);
 
         if (last_tag[req_idx] == MY_MPI_TAGS_MASTER_TO_SLAVE_TASK) {
             // MPI_Isend just finished
@@ -203,7 +205,10 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
             totalSum += last_result[req_idx];
 
             if (chunkStart < limit) {
-                MPI_Isend(&chunkStart,
+                last_tag[req_idx] = MY_MPI_TAGS_MASTER_TO_SLAVE_TASK;
+                last_chunk_start[req_idx] = chunkStart;
+
+                MPI_Isend(&last_chunk_start[req_idx],
                           1,
                           MPI_INT,
                           last_rank[req_idx],
@@ -211,13 +216,10 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
                           MPI_COMM_WORLD,
                           &req[req_idx]);
 
-                last_tag[req_idx] = MY_MPI_TAGS_MASTER_TO_SLAVE_TASK;
-                last_chunk_start[req_idx] = chunkStart;
                 chunkStart += chunkSize;
             }
             else {
                 // there's nothing else to process;
-                char dummy;
                 MPI_Isend(&dummy,
                           1,
                           MPI_CHAR,

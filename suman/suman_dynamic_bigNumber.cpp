@@ -49,7 +49,7 @@ mpz_class cmmdc(mpz_class a, mpz_class b) {
     return cmmdc(b, a % b);
 }
 
-// lowet common multiple
+// lowest common multiple
 mpz_class cmmmc(mpz_class a, mpz_class b) {
     return (a / cmmdc(a, b)) * b;
 }
@@ -97,15 +97,12 @@ InputInformation getInput(int rank) {
     if (rank == MASTER_RANK) {
         ifstream in(INPUT_FILE);
 
-        string N_str;
-        in >> N_str;
-        N = mpz_class(N_str);
-
+        in >> N;
         in >> numDivisors;
         for (int i = 0; i < numDivisors; ++i) {
-            string div_str;
-            in >> div_str;
-            divisors.emplace_back(div_str);
+            mpz_class div;
+            in >> div;
+            divisors.push_back(div);
         }
 
         in.close();
@@ -198,7 +195,12 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
             continue;
         }
 
-        MPI_Isend(&chunkStart,
+        last_tag[req_count] = MY_MPI_TAGS_MASTER_TO_SLAVE_TASK;
+        last_rank[req_count] = r;
+        last_chunk_start[req_count] = chunkStart;
+        last_result_buffer[req_count] = NULL; // will be reallocated
+
+        MPI_Isend(&last_chunk_start[req_count],
                   1,
                   MPI_INT,
                   r,
@@ -206,18 +208,15 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
                   MPI_COMM_WORLD,
                   &req[req_count]);
 
-        last_tag[req_count] = MY_MPI_TAGS_MASTER_TO_SLAVE_TASK;
-        last_rank[req_count] = r;
-        last_chunk_start[req_count] = chunkStart;
-        last_result_buffer[req_count] = (char*)malloc(sizeof(char) * 1); // will be reallocated
-
         chunkStart += chunkSize;
         req_count += 1;
     }
     MPIAssert(req_count == proc_num - 1);
     int activeSlaves = req_count;
 
+    char dummy; // for the MY_MPI_TAGS_MASTER_TO_SLAVE_TERMINATE message
     mpz_class totalSum = 0;
+
     while (activeSlaves > 0) {
         int req_idx;
         MPI_Waitany(req_count, req, &req_idx, MPI_STATUS_IGNORE);
@@ -262,7 +261,10 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
             totalSum += receivedSum;
 
             if (chunkStart < limit) {
-                MPI_Isend(&chunkStart,
+                last_tag[req_idx] = MY_MPI_TAGS_MASTER_TO_SLAVE_TASK;
+                last_chunk_start[req_idx] = chunkStart;
+
+                MPI_Isend(&last_chunk_start[req_idx],
                           1,
                           MPI_INT,
                           last_rank[req_idx],
@@ -270,13 +272,10 @@ void doMasterProc(int argc, char **argv, int rank, int proc_num, int debug, Inpu
                           MPI_COMM_WORLD,
                           &req[req_idx]);
 
-                last_tag[req_idx] = MY_MPI_TAGS_MASTER_TO_SLAVE_TASK;
-                last_chunk_start[req_idx] = chunkStart;
                 chunkStart += chunkSize;
             }
             else {
                 // there's nothing else to process;
-                char dummy;
                 MPI_Isend(&dummy,
                           1,
                           MPI_CHAR,
@@ -327,7 +326,10 @@ void doSlaveProc(int argc, char **argv, int rank, int proc_num, int debug, Input
 
             if (debug) { MPIPrintf("Got chunkStart: %i\n", chunkStart); }
             mpz_class localSum = computeSumForRange(rank, chunkStart, chunkSize, input, debug);
-            if (debug) { MPIPrintf("Computed localSum: %s\n\n", localSum.get_str().c_str()); }
+            if (debug) {
+                string localSumStr = localSum.get_str();
+                MPIPrintf("Computed localSum: %s\n\n", localSumStr.c_str());
+            }
 
             // we need the stringRepresentation variable here so that it doesn't get deallocated immediately
             string stringRepresentation = localSum.get_str();
