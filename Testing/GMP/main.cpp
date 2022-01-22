@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 #include <gmpxx.h>
-#include <mpi.h>
 
 using namespace std;
 
@@ -20,6 +19,11 @@ int main() {
     cout << "sum is " << c << "\n";
     cout << "absolute value is " << abs(c) << "\n";
     cout << "absolute value is " << c.get_str() << "\n";
+
+    mpz_class readIntoMe;
+    cout << "Input big number: ";
+    cin >> readIntoMe;
+    cout << "Number * 1000 + 10: " << readIntoMe * 1000 + 10 << endl;
 
     return 0;
 }

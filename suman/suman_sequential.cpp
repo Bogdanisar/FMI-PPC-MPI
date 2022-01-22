@@ -6,7 +6,6 @@
 using namespace std;
 
 #define KMAX 20 + 5
-int num_divs, divisors[KMAX];
 
 
 long long cmmdc(long long a, long long b) {
@@ -22,18 +21,17 @@ long long cmmmc(long long a, long long b) {
     return (a / cmmdc(a, b)) * (long long)b;
 }
 
+
 int main() {
     ifstream in("suman.in");
     ofstream out("suman.out");
 
     long long int N;
-    int numDivisors;
+    int numDivisors, divisors[KMAX];
     in >> N >> numDivisors;
 
     for (int i = 0; i < numDivisors; ++i) {
-        int d;
-        in >> d;
-        divisors[num_divs++] = d;
+        in >> divisors[i];
     }
 
     int limit_mask = (1<<numDivisors);

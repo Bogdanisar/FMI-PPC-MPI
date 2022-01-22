@@ -7,6 +7,7 @@ import os
 import os.path
 import shutil
 import argparse
+from enum import Enum
 
 
 TEST_DIR_NAME = "Tests"
@@ -33,39 +34,62 @@ def runCommand(cmd):
 
 
 commandCompileSequential = "g++ -std=c++11 '{file}.cpp' -o '{file}.exe' -lgmpxx -lgmp && chmod 755 '{file}.exe'"
+commandCompileConcurrent = "g++ --std=c++11 '{file}.cpp' -o '{file}.exe' -pthread -latomic -lgmpxx -lgmp"
 commandCompileMPI = "mpicxx '{file}.cpp' -o '{file}.exe' -lgmpxx -lgmp && chmod 755 '{file}.exe'"
 commandRunSequential = "'{file}.exe' 0"
+commandRunConcurrent = "'{file}.exe' {proc_num} 0"
 commandRunMPI = "mpirun -n {proc_num} '{file}.exe' 0"
 
+class ExecType(Enum):
+    SEQUENTIAL = 0
+    CONCURRENT = 1
+    MPI = 2
 
 kExecFileName = "kExecFileName"
-kExecIsMPI = "kExecIsMPI"
+kExecType = "kExecType"
 kExecIsBigNumber = "kExecIsBigNumber"
 executables = [
     {
         kExecFileName: "suman_sequential",
-        kExecIsMPI: False,
+        kExecType: ExecType.SEQUENTIAL,
         kExecIsBigNumber: False
+    },
+    {
+        kExecFileName: "suman_sequential_bigNumber",
+        kExecType: ExecType.SEQUENTIAL,
+        kExecIsBigNumber: True
+    },
+    {
+        kExecFileName: "suman_concurrent_stack",
+        kExecType: ExecType.CONCURRENT,
+        kExecIsBigNumber: False
+    },
+    {
+        kExecFileName: "suman_concurrent_stack_bigNumber",
+        kExecType: ExecType.CONCURRENT,
+        kExecIsBigNumber: True
     },
     {
         kExecFileName: "suman_reduce",
-        kExecIsMPI: True,
+        kExecType: ExecType.MPI,
         kExecIsBigNumber: False
     },
     {
+        kExecFileName: "suman_reduce_bigNumber",
+        kExecType: ExecType.MPI,
+        kExecIsBigNumber: True
+    },
+    {
         kExecFileName: "suman_dynamic",
-        kExecIsMPI: True,
+        kExecType: ExecType.MPI,
         kExecIsBigNumber: False
     },
+    {
+        kExecFileName: "suman_dynamic_bigNumber",
+        kExecType: ExecType.MPI,
+        kExecIsBigNumber: True
+    },
 ]
-
-
-def updateExecutables():
-    for exec in executables[:]:
-        new_exec = copy.deepcopy(exec)
-        new_exec[kExecFileName] = new_exec[kExecFileName] + "_bigNumber"
-        new_exec[kExecIsBigNumber] = True
-        executables.append(new_exec)
 
 
 def compileExecutables():
@@ -73,10 +97,12 @@ def compileExecutables():
         cwd = os.getcwd()
         execPath = os.path.join(cwd, executableDict[kExecFileName])
 
-        if executableDict[kExecIsMPI]:
-            compileCommand = commandCompileMPI.format(file=execPath)
-        else:
+        if executableDict[kExecType] == ExecType.SEQUENTIAL:
             compileCommand = commandCompileSequential.format(file=execPath)
+        elif executableDict[kExecType] == ExecType.CONCURRENT:
+            compileCommand = commandCompileConcurrent.format(file=execPath)
+        else:
+            compileCommand = commandCompileMPI.format(file=execPath)
 
         runCommand(compileCommand)
 
@@ -97,7 +123,6 @@ def runTests():
     testsDir = os.path.join(cwd, TEST_DIR_NAME)
     output_file = os.path.join(cwd, OUTPUT_FILE_NAME)
 
-    limit = 1 # TODO: Remove
     allTests = sorted(os.listdir(TEST_DIR_NAME))
     for i in range(0, len(allTests)):
         testName = allTests[i]
@@ -130,19 +155,27 @@ def runTests():
                 if testIsBigNumber and not executableIsBigNumber:
                     continue
 
-                if executableDict[kExecIsMPI]:
-                    procNumList = [2,4,8]
-                    cmd = commandRunMPI
-                else:
+                if executableDict[kExecType] == ExecType.SEQUENTIAL:
                     procNumList = [1] # doesn't matter. We just want a list with one element
                     cmd = commandRunSequential
+                elif executableDict[kExecType] == ExecType.CONCURRENT:
+                    procNumList = [1,2,8]
+                    cmd = commandRunConcurrent
+                else: # ExecType.MPI
+                    procNumList = [2,4,8]
+                    cmd = commandRunMPI
 
                 for processNumber in procNumList:
                     modified_cmd = cmd.format(file=executablePath, proc_num=processNumber)
                     runCommand(modified_cmd)
 
-                    curr_result = str(open(output_file).read())
-                    results.add(curr_result.strip())
+                    curr_result = str(open(output_file).read()).strip()
+
+                    if len(results) == 1 and curr_result not in results:
+                        print(f"Exec {executablePath} found a different result({curr_result}) than the current one({list(results)[0]})")
+                        print(f"📙 Test #{i} ({testName}) failed! ")
+                        sys.exit(-1)
+                    results.add(curr_result)
 
             if len(results) == 1:
                 print(f"📗 Test #{i} ({testName}) succeeded with result '{results.pop()}'! ")
@@ -167,7 +200,7 @@ if __name__ == "__main__":
     parser.add_argument('--verbose', '-v',
                         action="count",
                         default=0,
-                        help='Verbosity level (0 means none)')
+                        help='Verbosity level. Can pass multiple times')
     parser.add_argument('--test-name', '-tname',
                         action="append",
                         type=str,
@@ -175,13 +208,12 @@ if __name__ == "__main__":
     parser.add_argument('--big', '-b',
                         type=int,
                         default=None,
-                        help='Set to 0 or 1 to run non-big-number or big-number tests respectively')
+                        help='Set to 0 or 1 to run just non-big-number or big-number tests respectively')
 
     global args
     args = parser.parse_args()
     print(f"{args=}\n")
 
-    updateExecutables()
     compileExecutables(); print()
     runTests()
 
