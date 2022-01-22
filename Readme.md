@@ -16,6 +16,7 @@ One such application is the 'Suman' [problem](https://infoarena.ro/problema/suma
 I've implemented several solutions for the 'Suman' problem:
 - A sequential solution (no MPI).
 - A solution using a concurrent (lock-free) stack.
+- A solution using a concurrent (lock-free) queue.
 - A MPI solution where each process gets and equal amount of work and the results are joined using an MPI_Reduce call.
 - A MPI solution where each process dynamically gets new workload as soon as the last one has finished which might be preferential when the distributed nodes have unequal processing power.
 
@@ -49,6 +50,10 @@ The programs take input as text from `./suman/suman.in` and write output as text
 - `$: g++ --std=c++11 ./$source.cpp -o ./$source.exe -pthread -latomic -lgmpxx -lgmp` - compilation
 - `$: [time] ./$source.exe THREAD_NUMBER DEBUG_LEVEL` - execution
 
+The source variable can by any of the concurrent-implementation files, so:
+- `suman_concurrent_stack[_bigNumber]`;
+- `suman_concurrent_queue_bigNumber`; - no non-bigNumber version here
+
 &nbsp;
 
 ### Running the MPI variant (inside `./suman`):
@@ -60,7 +65,7 @@ or, in one line:
 
 `$: source=suman_dynamic; mpicxx $source.cpp -o $source.exe -lgmpxx -lgmp && chmod 755 ./$source.exe && [time] mpirun -n NUM_PROCESSES ./$source.exe DEBUG_LEVEL`
 
-The source variable can by any of the source files, so:
+The source variable can by any of the MPI-implementation files, so:
 - `suman_reduce[_bigNumber]`;
 - `suman_dynamic[_bigNumber]`;
 

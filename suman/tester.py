@@ -33,8 +33,8 @@ def runCommand(cmd):
         sys.exit(-1)
 
 
-commandCompileSequential = "g++ -std=c++11 '{file}.cpp' -o '{file}.exe' -lgmpxx -lgmp && chmod 755 '{file}.exe'"
-commandCompileConcurrent = "g++ --std=c++11 '{file}.cpp' -o '{file}.exe' -pthread -latomic -lgmpxx -lgmp"
+commandCompileSequential = "g++ -std=c++17 '{file}.cpp' -o '{file}.exe' -lgmpxx -lgmp && chmod 755 '{file}.exe'"
+commandCompileConcurrent = "g++ --std=c++17 '{file}.cpp' -o '{file}.exe' -pthread -latomic -lgmpxx -lgmp"
 commandCompileMPI = "mpicxx '{file}.cpp' -o '{file}.exe' -lgmpxx -lgmp && chmod 755 '{file}.exe'"
 commandRunSequential = "'{file}.exe' 0"
 commandRunConcurrent = "'{file}.exe' {proc_num} 0"
@@ -66,6 +66,11 @@ executables = [
     },
     {
         kExecFileName: "suman_concurrent_stack_bigNumber",
+        kExecType: ExecType.CONCURRENT,
+        kExecIsBigNumber: True
+    },
+    {
+        kExecFileName: "suman_concurrent_queue_bigNumber",
         kExecType: ExecType.CONCURRENT,
         kExecIsBigNumber: True
     },

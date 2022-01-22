@@ -3,7 +3,7 @@
 
 #include <atomic>
 
-// this implementation is from Anthony Williams's book Concurrency in Action
+// This implementation is from Anthony Williams's book Concurrency in Action
 
 template<typename T>
 class lock_free_stack
